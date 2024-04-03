@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package appointment;
+
+service AppointmentService {
+  rpc GetAppointment (GetAppointmentRequest) returns (AppointmentResponse);
+}
+
+message GetAppointmentRequest {
+  int32 appointment_id = 1;
+}
+
+message AppointmentResponse {
+  int32 id = 1;
+  int32 id_doctor = 2;
+  int32 id_patient = 3;
+  string date = 4;
+  string symptoms = 5;
+  string diagnosis = 6;
+}

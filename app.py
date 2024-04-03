@@ -5,11 +5,33 @@ from flask_cors import CORS
 from datetime import datetime
 from flask_migrate import Migrate
 
+#GRPC
+from concurrent import futures
+import grpc
+import appointment_pb2_grpc
+import appointment_pb2
+
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:3214@localhost/med_schedule_appointments'
 db = SQLAlchemy(app)
 CORS(app)
 migrate = Migrate(app, db)
+
+
+
+class AppointmentService(appointment_pb2_grpc.AppointmentServiceServicer):
+    def getAppointment(self, request, context):
+        appointment = get_appointment(request.appointment_id)
+        return appointment_pb2.AppointmentResponse(
+            id=appointment.id,
+            id_doctor=appointment.id_doctor,
+            id_patient=appointment.id_patient,
+            date=appointment.date.strftime('%Y-%m-%d %H:%M:%S'),
+            symptoms=appointment.symptoms,
+            diagnosis=appointment.diagnosis
+        )
+
+
 
 class Appointment(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -81,7 +103,14 @@ def delete_appointment(appointment_id):
     db.session.commit()
     return jsonify({'message': 'Appointment deleted successfully'})
 
+
+def server():
+    server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
+    appointment_pb2_grpc.add_AppointmentServiceServicer_to_server(
+        AppointmentService(), server)
+    server.add_insecure_port('localhost:50051')
+    server.start()
+    server.wait_for_termination()
+
 if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
-    app.run(debug=True)
+    server()
